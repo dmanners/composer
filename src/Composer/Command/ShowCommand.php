@@ -754,6 +754,9 @@ EOT
                         $color,
                         $require['version']
                     );
+                    if (isset($require['path'])) {
+                        $info .= ' (' . $require['path'] . ')';
+                    }
                     $this->writeTreeLine($info);
 
                     $treeBar = str_replace('└', ' ', $treeBar);
@@ -791,6 +794,10 @@ EOT
                     'name' => $requireName,
                     'version' => $require->getPrettyConstraint(),
                 );
+
+                if ($showPath === true) {
+                    $treeChildDesc['path'] = $composer->getInstallationManager()->getInstallPath($require);
+                }
 
                 $deepChildren = $this->addTree($requireName, $require, $installedRepo, $distantRepos, $packagesInTree);
 
