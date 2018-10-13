@@ -181,6 +181,11 @@ EOT
             $input->setOption('latest', false);
         }
 
+        if ($input->getOption('path') && null === $composer) {
+            $io->writeError('No composer.json found in the current directory, disabling "path" option');
+            $input->setOption('path', false);
+        }
+
         $packageFilter = $input->getArgument('package');
 
         // show single package or single version
@@ -204,7 +209,7 @@ EOT
 
             $exitCode = 0;
             if ($input->getOption('tree')) {
-                $arrayTree = $this->generatePackageTree($package, $installedRepo, $repos);
+                $arrayTree = $this->generatePackageTree($package, $installedRepo, $repos, $composer, $input->getOption('path'));
 
                 if ('json' === $format) {
                     $io->write(JsonFile::encode(array('installed' => array($arrayTree))));
@@ -244,7 +249,7 @@ EOT
             $arrayTree = array();
             foreach ($packages as $package) {
                 if (in_array($package->getName(), $rootRequires, true)) {
-                    $arrayTree[] = $this->generatePackageTree($package, $installedRepo, $repos);
+                    $arrayTree[] = $this->generatePackageTree($package, $installedRepo, $repos, $composer, $input->getOption('path'));
                 }
             }
 
@@ -290,11 +295,6 @@ EOT
             $width--;
         } else {
             $width = max(80, $width);
-        }
-
-        if ($input->getOption('path') && null === $composer) {
-            $io->writeError('No composer.json found in the current directory, disabling "path" option');
-            $input->setOption('path', false);
         }
 
         foreach ($repos as $repo) {
@@ -729,6 +729,9 @@ EOT
             $io->write(sprintf('<info>%s</info>', $package['name']), false);
             $io->write(' ' . $package['version'], false);
             $io->write(' ' . strtok($package['description'], "\r\n"));
+            if (isset($package['path'])) {
+                $io->write(' ' . strtok($package['path'], "\r\n"));
+            }
 
             if (isset($package['requires'])) {
                 $requires = $package['requires'];
@@ -773,7 +776,9 @@ EOT
     protected function generatePackageTree(
         PackageInterface $package,
         RepositoryInterface $installedRepo,
-        RepositoryInterface $distantRepos
+        RepositoryInterface $distantRepos,
+        Composer $composer,
+        $showPath = false
     ) {
         if (is_object($package)) {
             $requires = $package->getRequires();
@@ -803,6 +808,10 @@ EOT
 
             if ($children) {
                 $tree['requires'] = $children;
+            }
+
+            if ($showPath === true) {
+                $tree['path'] = $composer->getInstallationManager()->getInstallPath($package);
             }
 
             return $tree;
